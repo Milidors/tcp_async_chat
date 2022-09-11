@@ -44,7 +44,7 @@ class ServerTCP:
                     asyncio.create_task(self.send_all_msg(response))
                     if response[0:2] == response[0]+"q":
                         data='q'
-                        print(f"DISCONNECT: {self.list_connections[int(response[0])]}")
+                        print("DISCONNECT: ", response[response.find("("):response.find(")")+1])
                         self.list_connections[int(response[0])].close()
                         exit()
                 except Exception:
