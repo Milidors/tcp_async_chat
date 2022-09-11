@@ -1,6 +1,6 @@
 import socket
 import asyncio
-
+from aioconsole import ainput
 
 class ClientTCP:
     def __init__(self, server, port):
@@ -13,26 +13,29 @@ class ClientTCP:
         loop = asyncio.get_event_loop()
         self.server.setblocking(False)
         await loop.sock_connect(self.server, ('', self.port))
-        print("Подключилися")
+        print("Connect")
         if num_connect is None:
             num_connect = (await loop.sock_recv(self.server, 255)).decode("utf-8")
             print(num_connect)
+        asyncio.create_task(self.listen(num_connect))
         while msg != "q":
             try:
-                msg = input(">> ")
-                
-                # response = self.server.recv(1024).decode("utf-8")
-
+                msg = await ainput(">> ")
                 if msg:
-                    # self.server.sendall(msg.encode("utf-8"))
                     await loop.sock_sendall(self.server, (num_connect+msg + " " + str(self.server)).encode("utf-8"))                    
-                    # response = self.server.recv(1024).decode("utf-8")
-                    response = (await loop.sock_recv(self.server, 255)).decode("utf-8")
-                    print(response)
             except Exception:
                 self.server.close()
                 exit()
-                
+        
+    async def listen(self, num_connect):
+        loop = asyncio.get_event_loop()
+        while True:
+            response = (await loop.sock_recv(self.server, 255)).decode("utf-8")
+            if response[0] == num_connect:
+                print("YOU: ",response[1:])
+            else:
+                print(response[1:])
+
 
 if __name__ == "__main__":
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

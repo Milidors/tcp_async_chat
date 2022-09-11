@@ -1,6 +1,6 @@
 import socket
 import asyncio
-# РЕАЛИЗОВАТЬ ОБЩИЙ ЧАТ 
+# РЕАЛИЗОВАТЬ ОБЩИЙ ЧАТ ++++++
 # РЕАЛИЗОВАТЬ ЛС
 
 class ServerTCP:
@@ -10,23 +10,19 @@ class ServerTCP:
 
     # Прием подключений 
     async def accept_connection(self):
-        
         loop = asyncio.get_event_loop()
         while True:
             try:
                 self.server.setblocking(False)
                 self.connetcion, self.addr = await loop.sock_accept(self.server)
-
                 # Если в списке существует подключение то можно отправлять сообщения
                 if self.connetcion in self.list_connections:
-
                     client = loop.create_task(self.handle_client())
-
                     await client
                 # Иначе добавляем подключение в список 
-                else:                    
+                else:  
+                    print("+1")                  
                     self.list_connections.append(self.connetcion)
-                    
                     await loop.sock_sendall(self.connetcion, str(self.list_connections.index(self.connetcion)).encode("utf-8"))
                     client = loop.create_task(self.handle_client())
                     await client
@@ -36,24 +32,28 @@ class ServerTCP:
     async def handle_client(self):
             data = " "
             loop = asyncio.get_event_loop()
+            # Создаем новый поток для принятия новых подключений
+            asyncio.create_task(self.accept_connection())
+
             while data != "q":
-                
                 try:
-                    
                     data = (await loop.sock_recv(self.list_connections[self.list_connections.index(self.connetcion)], 255)).decode("utf-8")
                     response = str(data)
                     self.connetcion = self.list_connections[int(response[0])]
                     print("USER", response[response.find("("):response.find(")")+1], response[1:response.find("<")])
-                    await loop.sock_sendall(self.list_connections[int(response[0])], data.encode("utf-8"))
-                    print(response[0:2])
+                    asyncio.create_task(self.send_all_msg(response))
                     if response[0:2] == response[0]+"q":
                         data='q'
+                        print(f"DISCONNECT: {self.list_connections[int(response[0])]}")
                         self.list_connections[int(response[0])].close()
                         exit()
-                    asyncio.create_task(self.accept_connection())
-                    
                 except Exception:
                     pass
+
+    async def send_all_msg(self, response):
+        for client in self.list_connections:
+            await loop.sock_sendall(client, response[0:response.find("<")].encode("utf-8"))
+
     
     async def run_server(self):
         self.server.bind(("", self.port))
