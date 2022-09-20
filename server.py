@@ -1,5 +1,6 @@
 import socket
 import asyncio
+from sys import flags
 # РЕАЛИЗОВАТЬ ОБЩИЙ ЧАТ ++++++
 # РЕАЛИЗОВАТЬ ЛС
 
@@ -7,6 +8,7 @@ class ServerTCP:
     def __init__(self, server, port):
         self.server = server
         self.port = port
+        self.id = 0
 
     # Прием подключений 
     async def accept_connection(self):
@@ -17,44 +19,54 @@ class ServerTCP:
                 self.connetcion, self.addr = await loop.sock_accept(self.server)
                 # Если в списке существует подключение то можно отправлять сообщения
                 if self.connetcion in self.list_connections:
-                    client = loop.create_task(self.handle_client())
-                    await client
+                    # client = loop.create_task(self.handle_client())
+                    # await client
+                    continue
                 # Иначе добавляем подключение в список 
                 else:  
-                    print("+1")                  
+                    print(f"USER CONNECT: {self.addr}")                  
                     self.list_connections.append(self.connetcion)
-                    await loop.sock_sendall(self.connetcion, str(self.list_connections.index(self.connetcion)).encode("utf-8"))
-                    client = loop.create_task(self.handle_client())
+                    await loop.sock_sendall(self.connetcion, str(self.id).encode("utf-8"))
+                    client = loop.create_task(self.handle_client(self.connetcion))
                     await client
             except Exception:
                 pass
            
-    async def handle_client(self):
+        #    переработать структуру кода 
+        # сохранение название сокета 
+    async def handle_client(self, client):
             data = " "
+            flag = True
             loop = asyncio.get_event_loop()
             # Создаем новый поток для принятия новых подключений
+            self.id += self.id + 1
             asyncio.create_task(self.accept_connection())
 
-            while data != "q":
-                try:
-                    data = (await loop.sock_recv(self.list_connections[self.list_connections.index(self.connetcion)], 255)).decode("utf-8")
+            while flag:
+                
+                    data = (await loop.sock_recv(client, 1024)).decode("utf-8")
                     response = str(data)
-                    self.connetcion = self.list_connections[int(response[0])]
-                    print("USER", response[response.find("("):response.find(")")+1], response[1:response.find("<")])
+                    print("USER", response)
+                    # доработать выход из чата 
                     asyncio.create_task(self.send_all_msg(response))
-                    if response[0:2] == response[0]+"q":
-                        data='q'
-                        print("DISCONNECT: ", response[response.find("("):response.find(")")+1])
-                        self.list_connections[int(response[0])].close()
-                        exit()
-                except Exception:
-                    pass
+                    if response[1:] == "q":
+                        print(f"DISCONNECT: {self.list_connections}")
+                        
+                        if client in self.list_connections:
+                            print(client)
+                            indx = self.list_connections.index(client)
+                            self.list_connections[indx].close()
+                            self.list_connections.pop(indx)
+                        
 
     async def send_all_msg(self, response):
-        for client in self.list_connections:
-            await loop.sock_sendall(client, response[0:response.find("<")].encode("utf-8"))
+        try:
+            print(response)
+            for client in self.list_connections:
+                await loop.sock_sendall(client, response.encode("utf-8"))
+        except OSError:
+            exit()
 
-    
     async def run_server(self):
         self.server.bind(("", self.port))
         self.server.listen(3)   # кол - во подключений
