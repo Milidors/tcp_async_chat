@@ -17,24 +17,25 @@ class ServerTCP:
             try:
                 self.server.setblocking(False)
                 self.connetcion, self.addr = await loop.sock_accept(self.server)
+                self.user_name = (await loop.sock_recv(self.connetcion, 1024)).decode("utf-8")
+                await loop.sock_sendall(self.connetcion, self.user_name.encode("utf-8"))
                 # Если в списке существует подключение то можно отправлять сообщения
                 if self.connetcion in self.list_connections:
-                    # client = loop.create_task(self.handle_client())
-                    # await client
                     continue
                 # Иначе добавляем подключение в список 
                 else:  
-                    print(f"USER CONNECT: {self.addr}")                  
+                    print(f"USER CONNECT: IP-> {self.addr}\nUser name-> {self.user_name}")                  
                     self.list_connections.append(self.connetcion)
                     await loop.sock_sendall(self.connetcion, str(self.id).encode("utf-8"))
-                    client = loop.create_task(self.handle_client(self.connetcion))
+                    client = loop.create_task(self.handle_client(self.connetcion, self.user_name))
                     await client
             except Exception:
                 pass
            
         #    переработать структуру кода 
         # сохранение название сокета 
-    async def handle_client(self, client):
+    async def handle_client(self, client, user_name):
+        try:
             data = " "
             flag = True
             loop = asyncio.get_event_loop()
@@ -46,25 +47,24 @@ class ServerTCP:
                 
                     data = (await loop.sock_recv(client, 1024)).decode("utf-8")
                     response = str(data)
-                    print("USER", response)
+                    print(f"USER: {user_name} msg: {response}")
                     # доработать выход из чата 
                     asyncio.create_task(self.send_all_msg(response))
                     if response[1:] == "q":
-                        print(f"DISCONNECT: {self.list_connections}")
-                        
+                        print(f"DISCONNECT: {user_name}")
                         if client in self.list_connections:
-                            print(client)
                             indx = self.list_connections.index(client)
-                            self.list_connections[indx].close()
+                            client.close()
                             self.list_connections.pop(indx)
-                        
+        except Exception:
+            pass            
 
     async def send_all_msg(self, response):
         try:
             print(response)
             for client in self.list_connections:
                 await loop.sock_sendall(client, response.encode("utf-8"))
-        except OSError:
+        except Exception:
             exit()
 
     async def run_server(self):

@@ -1,3 +1,4 @@
+from re import L
 import socket
 import asyncio
 from sys import flags
@@ -10,36 +11,46 @@ class ClientTCP:
         self.port = port
     
     async def connection(self):
-        msg = None
-        flag = True
-        num_connect = None
+        self.msg = None
+        self.flag = True
+        id_connections = None
+        list_user_names = []
+        self.user_name = input("Please input your nickname: ")
         loop = asyncio.get_event_loop()
         self.server.setblocking(False)
         await loop.sock_connect(self.server, ('', self.port))
-        print("Connect")
-        if num_connect is None:
-            num_connect = (await loop.sock_recv(self.server, 255)).decode("utf-8")
-            print(num_connect)
-        asyncio.create_task(self.listen(num_connect))
-        while flag:
+        await loop.sock_sendall(self.server, self.user_name.encode("utf-8"))
+        list_user_names.append((await loop.sock_recv(self.server, 1024)).decode("utf-8"))
+        print(f"Connect {list_user_names[-1]}")
+        if id_connections is None:
+            id_connections = (await loop.sock_recv(self.server, 255)).decode("utf-8")
+            print(id_connections)
+        asyncio.create_task(self.listen(id_connections))
+        while self.flag:
             try:
-                msg = await ainput(">> ")
-                if msg:
-                    await loop.sock_sendall(self.server, (num_connect+msg).encode("utf-8"))
-                elif msg == 'q':
-                    self.server.close()
-                    pass
-            except Exception:
-                pass
-    async def listen(self, num_connect):
+                self.msg = await ainput(">> ")
+                if self.msg and self.msg != "q":
+                    await loop.sock_sendall(self.server, (id_connections+self.msg).encode("utf-8"))
+                if self.msg == "q":
+                    await loop.sock_sendall(self.server, (id_connections+self.msg).encode("utf-8"))
+                    break
+            except SystemExit:
+                self.flag = False
+                
+    async def listen(self, id_connections):
         loop = asyncio.get_event_loop()
         while True:
             try:
-                response = (await loop.sock_recv(self.server, 255)).decode("utf-8")
-                if response[0] == num_connect:
-                    print("YOU: ",  response[1:response.rfind("(")])
+                
+                if self.msg != "q":
+                    response = (await loop.sock_recv(self.server, 255)).decode("utf-8")
+                    print(response[0], id_connections, self.user_name)
+                    if response[0] == id_connections:
+                        print("YOU: ",  response[1:])
+                    else:
+                        print(f"{self.user_name}:", response[1:])
                 else:
-                    print("USER:", response[response.rfind("('"):], response[1:response.rfind("(")])
+                    exit()
             except IndexError:
                 exit()
 
