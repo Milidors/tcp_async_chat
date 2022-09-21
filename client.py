@@ -30,9 +30,9 @@ class ClientTCP:
             try:
                 self.msg = await ainput(">> ")
                 if self.msg and self.msg != "q":
-                    await loop.sock_sendall(self.server, (id_connections+self.msg).encode("utf-8"))
+                    await loop.sock_sendall(self.server, (self.msg).encode("utf-8"))
                 if self.msg == "q":
-                    await loop.sock_sendall(self.server, (id_connections+self.msg).encode("utf-8"))
+                    await loop.sock_sendall(self.server, (self.msg).encode("utf-8"))
                     break
             except SystemExit:
                 self.flag = False
@@ -44,11 +44,7 @@ class ClientTCP:
                 
                 if self.msg != "q":
                     response = (await loop.sock_recv(self.server, 255)).decode("utf-8")
-                    print(response[0], id_connections, self.user_name)
-                    if response[0] == id_connections:
-                        print("YOU: ",  response[1:])
-                    else:
-                        print(f"{self.user_name}:", response[1:])
+                    print(response[0:])
                 else:
                     exit()
             except IndexError:

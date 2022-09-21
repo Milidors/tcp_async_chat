@@ -2,7 +2,9 @@ import socket
 import asyncio
 from sys import flags
 # РЕАЛИЗОВАТЬ ОБЩИЙ ЧАТ ++++++
-# РЕАЛИЗОВАТЬ ЛС
+# РЕАЛИЗОВАТЬ ЛС -----------
+# графический интерфейс Qtpython
+
 
 class ServerTCP:
     def __init__(self, server, port):
@@ -47,23 +49,23 @@ class ServerTCP:
                 
                     data = (await loop.sock_recv(client, 1024)).decode("utf-8")
                     response = str(data)
-                    print(f"USER: {user_name} msg: {response}")
+                    print(f"USER: {user_name}, msg: {response}")
                     # доработать выход из чата 
-                    asyncio.create_task(self.send_all_msg(response))
-                    if response[1:] == "q":
+                    asyncio.create_task(self.send_all_msg(response, user_name))
+                    if response[0:] == "q":
                         print(f"DISCONNECT: {user_name}")
                         if client in self.list_connections:
                             indx = self.list_connections.index(client)
-                            client.close()
+                            self.list_connections[indx].close()
                             self.list_connections.pop(indx)
         except Exception:
             pass            
 
-    async def send_all_msg(self, response):
+    async def send_all_msg(self, response, user_name):
         try:
             print(response)
             for client in self.list_connections:
-                await loop.sock_sendall(client, response.encode("utf-8"))
+                await loop.sock_sendall(client, (user_name+": "+response).encode("utf-8"))
         except Exception:
             exit()
 
@@ -82,5 +84,4 @@ if __name__ == "__main__":
     server = ServerTCP(sock, 10808)
     loop = asyncio.get_event_loop()
     print("START SERVER")
-    # loop.run_until_complete(server.run_server())
     asyncio.run(server.run_server())
