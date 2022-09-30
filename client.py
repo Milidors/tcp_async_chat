@@ -34,8 +34,10 @@ class ClientTCP:
                 if self.msg == "q":
                     await loop.sock_sendall(self.server, (self.msg).encode("utf-8"))
                     break
-            except SystemExit:
+            except KeyboardInterrupt:
+                print("YES")
                 self.flag = False
+                exit()
                 
     async def listen(self, id_connections):
         loop = asyncio.get_event_loop()
@@ -47,11 +49,14 @@ class ClientTCP:
                     print(response[0:])
                 else:
                     exit()
-            except IndexError:
+            except KeyboardInterrupt:
                 exit()
 
 
 if __name__ == "__main__":
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server = ClientTCP(sock, 10808)
-    asyncio.run(server.connection())
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server = ClientTCP(sock, 10808)
+        asyncio.run(server.connection())
+    except KeyboardInterrupt or ConnectionResetError:
+        exit()
